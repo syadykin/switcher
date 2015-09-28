@@ -182,16 +182,16 @@ void status() {
   }
 }
 
-uint64_t time;
+uint64_t time_to;
 void toggle(bool value, uint16_t tm) {
-  if (tm != 0) time = millis() + tm * 1000;
-  else time = 0;
+  if (tm != 0) time_to = millis() + tm * 1000;
+  else time_to = 0;
   enabled = value;
   // indication LED
   digitalWrite(GPIO0, enabled);
   digitalWrite(GPIO2, !enabled);
   // reset timer for further use
-  if (!enabled) time = 0;
+  if (!enabled) time_to = 0;
   status();
 }
 
@@ -277,6 +277,6 @@ void loop() {
 
   read = Serial.available();
   if (read != 0) readSerial(read);
-  if (time != 0 && time < millis()) toggle(false, 0);
+  if (time_to != 0 && time_to < millis()) toggle(false, 0);
 }
 
