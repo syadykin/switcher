@@ -2,17 +2,20 @@
  * Find device by service
  * $ avahi-browse -r _switcher._udp -p -t
  * 
- * Enable over wifi
+ * Enable
  * $ echo -ne "\x00\x00\x00" | nc -4u -w0 192.168.78.206 3333
  * 
- * Enable over wifi for one second
- * $ echo -ne "\x00\x01\x00" | nc -4u -w0 192.168.78.206 3333
+ * Enable after 2 seconds
+ * $ echo -ne "\x00\x02\x00" | nc -4u -w0 192.168.78.206 3333
  * 
- * Enable over wifi for 256 seconds
- * $ echo -ne "\x00\x00\x01" | nc -4u -w0 192.168.78.206 3333
- * 
- * Disable over wifi
+ * Disable
  * $ echo -ne "\xFF\x00\x00" | nc -4u -w0 192.168.78.206 3333
+ * 
+ * Disable after 2 seconds
+ * $ echo -ne "\xFF\x02\x00" | nc -4u -w0 192.168.78.206 3333
+ * 
+ * Disable after 256 seconds
+ * $ echo -ne "\xFF\x00\x01" | nc -4u -w0 192.168.78.206 3333
  * 
  * Connect using screen
  * $ screen /dev/ttyUSB0 115200
@@ -183,16 +186,20 @@ void status() {
 }
 
 uint64_t time_to;
+bool switch_to;
+
 void toggle(bool value, uint16_t tm) {
-  if (tm != 0) time_to = millis() + tm * 1000;
-  else time_to = 0;
-  enabled = value;
-  // indication LED
-  digitalWrite(GPIO0, enabled);
-  digitalWrite(GPIO2, !enabled);
-  // reset timer for further use
-  if (!enabled) time_to = 0;
-  status();
+  if (tm == 0) {
+    enabled = value;
+    // indication LED
+    digitalWrite(GPIO0, enabled);
+    digitalWrite(GPIO2, !enabled);
+    time_to = 0;
+    status();
+  } else {
+    time_to = millis() + tm * 1000;
+    switch_to = value;
+  }
 }
 
 //uint16_t fh;
@@ -266,17 +273,13 @@ void loop() {
     read = udp.parsePacket();
     if (read == 3) {
       udp.read(tmp, read);
-      if (tmp[0] == 0x00) {
-        toggle(true, tmp[1] | tmp[2] << 8);
-      } else if (tmp[0] == 0xFF) {
-        toggle(false, 0);
-      }
+      toggle(tmp[0] == 0x00, tmp[1] | tmp[2] << 8);
     }
     if (read) udp.flush();
   }
 
   read = Serial.available();
   if (read != 0) readSerial(read);
-  if (time_to != 0 && time_to < millis()) toggle(false, 0);
+  if (time_to != 0 && time_to < millis()) toggle(switch_to, 0);
 }
 
